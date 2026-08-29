@@ -58,6 +58,14 @@ model MediaHash {
   createdAt DateTime @default(now())
 }
 
+model BotSession {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  data      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum CardType {
   PHOTO
   VIDEO

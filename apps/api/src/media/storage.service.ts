@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -43,6 +44,20 @@ export class StorageService {
       this.client,
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
       { expiresIn },
+    );
+  }
+
+  async download(key: string): Promise<Buffer> {
+    const res = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!res.Body) throw new Error('Пустое тело объекта');
+    return Buffer.from(await res.Body.transformToByteArray());
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
     );
   }
 }
