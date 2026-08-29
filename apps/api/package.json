@@ -1,0 +1,7 @@
+{
+  "name": "@slivapack/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SlivaPack backend (NestJS)",
+  "scripts": {}
+}
