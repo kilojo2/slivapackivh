@@ -29,17 +29,26 @@ export function CardItem({
         aria-label={`Открыть: ${card.title}`}
       >
         {first?.type === 'VIDEO' ? (
-          <>
-            <video src={url} preload="metadata" muted playsInline />
-            <span className="badge">▶ видео</span>
-          </>
+          <video src={url} preload="metadata" muted playsInline />
         ) : (
           <img src={url} alt={card.title} loading="lazy" />
         )}
+
+        <span className="media-scrim" />
+
+        <span className="badge badge-type">
+          {first?.type === 'VIDEO' ? '▶ видео' : 'фото'}
+        </span>
+
         {card.media.length > 1 && (
           <span className="badge badge-count">📷 {card.media.length}</span>
         )}
+
+        <span className="badge badge-views">👁 {card.viewCount}</span>
+
+        <span className="media-cta">Смотреть</span>
       </button>
+
       <div className="card-body">
         <h2 className="card-title">{card.title}</h2>
         <p className="card-text">{card.text}</p>
@@ -49,7 +58,7 @@ export function CardItem({
             className="btn btn-primary"
             onClick={() => onView(card)}
           >
-            Посмотреть
+            Смотреть
           </button>
           <LikeButton cardId={card.id} likeCount={likeCount} onLiked={onLiked} />
         </div>

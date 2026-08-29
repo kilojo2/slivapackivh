@@ -94,16 +94,23 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  border-color: #2c3546;
 }
 .card-media {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
   border: none;
   padding: 0;
   background: #000;
   cursor: pointer;
+  overflow: hidden;
 }
 .card-media img,
 .card-media video {
@@ -111,6 +118,42 @@ a:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+.card:hover .card-media img,
+.card:hover .card-media video {
+  transform: scale(1.04);
+}
+.media-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 45%);
+  opacity: 0.45;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.card:hover .media-scrim {
+  opacity: 0.85;
+}
+.media-cta {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(6px);
+  background: var(--accent);
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.card:hover .media-cta {
+  opacity: 1;
+  transform: translate(-50%, -50%);
 }
 .card-media .badge {
   position: absolute;
@@ -122,6 +165,13 @@ a:hover {
   padding: 4px 8px;
   border-radius: 8px;
 }
+.card-media .badge-count {
+  top: 34px;
+}
+.card-media .badge-views {
+  left: auto;
+  right: 8px;
+}
 .card-body {
   padding: 12px 14px;
   flex: 1;
@@ -130,11 +180,14 @@ a:hover {
 }
 .card-title {
   margin: 0 0 6px;
-  font-size: 17px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 .card-text {
   margin: 0 0 12px;
   font-size: 14px;
+  line-height: 1.4;
   color: var(--text-muted);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -286,8 +339,4 @@ a:hover {
   height: 40px;
   font-size: 22px;
   cursor: pointer;
-}
-.card-media .badge-count {
-  left: auto;
-  right: 8px;
 }
