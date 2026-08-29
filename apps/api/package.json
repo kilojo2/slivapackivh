@@ -5,7 +5,7 @@
   "description": "SlivaPack backend (NestJS)",
   "scripts": {
     "build": "prisma generate && nest build",
-    "start": "node dist/main.js",
+    "start": "prisma migrate deploy && node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit",
@@ -25,6 +25,7 @@
     "@nestjs/platform-express": "^11.2.3",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.19.3",
+    "prisma": "^6.19.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
@@ -37,7 +38,6 @@
     "@nestjs/cli": "^12.0.0",
     "@types/express": "^5.0.6",
     "@types/node": "^26.4.0",
-    "prisma": "^6.19.3",
     "typescript": "^6.0.3"
   }
 }
