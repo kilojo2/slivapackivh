@@ -11,11 +11,8 @@ export const BACK_TO_MENU = Markup.inlineKeyboard([
   [Markup.button.callback('🏠 В меню', 'menu')],
 ]).reply_markup;
 
-export const ADD_TYPE = Markup.inlineKeyboard([
-  [
-    Markup.button.callback('📷 Фото', 'add:photo'),
-    Markup.button.callback('🎬 Видео', 'add:video'),
-  ],
+export const MEDIA_MORE = Markup.inlineKeyboard([
+  [Markup.button.callback('✅ Готово', 'add:media_done')],
   [Markup.button.callback('❌ Отмена', 'menu')],
 ]).reply_markup;
 
@@ -33,7 +30,7 @@ export const ADD_PREVIEW = Markup.inlineKeyboard([
     Markup.button.callback('✏️ Заголовок', 'add:edit_title'),
     Markup.button.callback('✏️ Описание', 'add:edit_text'),
   ],
-  [Markup.button.callback('🔄 Заменить файл', 'add:replace')],
+  [Markup.button.callback('➕ Добавить ещё медиа', 'add:more_media')],
   [Markup.button.callback('❌ Отмена', 'add:cancel')],
 ]).reply_markup;
 
@@ -69,7 +66,7 @@ export function cardActions(card: { id: string; status: string }) {
     Markup.button.callback('✏️ Заголовок', `card:edit_title:${card.id}`),
     Markup.button.callback('✏️ Описание', `card:edit_text:${card.id}`),
   ]);
-  rows.push([Markup.button.callback('🔄 Заменить файл', `card:replace:${card.id}`)]);
+  rows.push([Markup.button.callback('➕ Добавить медиа', `card:append:${card.id}`)]);
   rows.push([
     card.status === 'REMOVED'
       ? Markup.button.callback('🗑 Удалить навсегда', `card:purge:${card.id}`)

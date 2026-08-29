@@ -9,10 +9,8 @@ datasource db {
 
 model Card {
   id           String     @id @default(cuid())
-  type         CardType   @default(PHOTO)
   title        String     @db.VarChar(200)
   text         String     @db.Text
-  mediaKey     String
   status       CardStatus @default(DRAFT)
   authorUserId String?
   viewCount    Int        @default(0)
@@ -20,8 +18,22 @@ model Card {
   updatedAt    DateTime   @updatedAt
 
   likes Like[]
+  media Media[]
 
   @@index([status, createdAt])
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  cardId    String
+  type      CardType
+  mediaKey  String
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, sort])
 }
 
 model Like {

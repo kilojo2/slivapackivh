@@ -252,3 +252,25 @@ a:hover {
 .prose li {
   color: var(--text-muted);
 }
+
+.gallery-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+.gallery-nav button {
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  cursor: pointer;
+}
+.card-media .badge-count {
+  left: auto;
+  right: 8px;
+}

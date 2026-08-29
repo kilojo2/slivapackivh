@@ -9,14 +9,30 @@ export class CardsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: {
-    type: 'PHOTO' | 'VIDEO';
     title: string;
     text: string;
-    mediaKey: string;
+    media: { type: 'PHOTO' | 'VIDEO'; mediaKey: string }[];
     authorUserId?: string;
     status?: 'DRAFT' | 'PUBLISHED' | 'REMOVED';
   }) {
-    return this.prisma.card.create({ data });
+    return this.prisma.card.create({
+      data: {
+        title: data.title,
+        text: data.text,
+        authorUserId: data.authorUserId,
+        status: data.status,
+        media: {
+          create: data.media.map((m, i) => ({
+            type: m.type,
+            mediaKey: m.mediaKey,
+            sort: i,
+          })),
+        },
+      },
+      include: {
+        media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },
+      },
+    });
   }
 
   async findPublished(query: GetCardsQueryDto) {
@@ -31,12 +47,11 @@ export class CardsService {
         take: limit,
         select: {
           id: true,
-          type: true,
           title: true,
           text: true,
-          mediaKey: true,
           viewCount: true,
           createdAt: true,
+          media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },
           _count: { select: { likes: true } },
         },
       }),
@@ -56,12 +71,11 @@ export class CardsService {
       where: { id, status: 'PUBLISHED' },
       select: {
         id: true,
-        type: true,
         title: true,
         text: true,
-        mediaKey: true,
         viewCount: true,
         createdAt: true,
+        media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },
         _count: { select: { likes: true } },
       },
     });

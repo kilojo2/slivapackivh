@@ -1,4 +1,4 @@
-import type { Card, CardsResponse } from './types';
+import type { CardsResponse } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
@@ -23,7 +23,7 @@ export async function likeCard(
   return res.json();
 }
 
-export function mediaUrl(card: Card): string {
+export function mediaUrl(mediaKey: string): string {
   const base = process.env.NEXT_PUBLIC_MEDIA_URL ?? '';
-  return `${base}/${card.mediaKey}`;
+  return `${base}/${mediaKey}`;
 }

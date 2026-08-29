@@ -17,7 +17,8 @@ export function CardItem({
   onView,
   onLiked,
 }: CardItemProps) {
-  const url = mediaUrl(card);
+  const first = card.media[0];
+  const url = first ? mediaUrl(first.mediaKey) : '';
 
   return (
     <article className="card">
@@ -27,13 +28,16 @@ export function CardItem({
         onClick={() => onView(card)}
         aria-label={`Открыть: ${card.title}`}
       >
-        {card.type === 'VIDEO' ? (
+        {first?.type === 'VIDEO' ? (
           <>
             <video src={url} preload="metadata" muted playsInline />
             <span className="badge">▶ видео</span>
           </>
         ) : (
           <img src={url} alt={card.title} loading="lazy" />
+        )}
+        {card.media.length > 1 && (
+          <span className="badge badge-count">📷 {card.media.length}</span>
         )}
       </button>
       <div className="card-body">

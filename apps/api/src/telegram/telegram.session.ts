@@ -2,19 +2,22 @@ import { PrismaService } from '../prisma/prisma.service';
 
 export type BotStep =
   | 'idle'
-  | 'awaiting_photo'
-  | 'awaiting_video'
+  | 'awaiting_media'
   | 'awaiting_title'
   | 'awaiting_text'
   | 'awaiting_add_title'
   | 'awaiting_add_text'
   | 'awaiting_edit_title'
   | 'awaiting_edit_text'
-  | 'awaiting_replace_media';
+  | 'awaiting_append_media';
+
+export interface MediaItem {
+  type: 'PHOTO' | 'VIDEO';
+  mediaKey: string;
+}
 
 export interface DraftData {
-  type?: 'PHOTO' | 'VIDEO';
-  mediaKey?: string;
+  media?: MediaItem[];
   title?: string;
   text?: string;
 }

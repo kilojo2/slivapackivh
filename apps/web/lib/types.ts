@@ -1,11 +1,15 @@
 export type CardType = 'PHOTO' | 'VIDEO';
 
+export interface MediaItem {
+  type: CardType;
+  mediaKey: string;
+}
+
 export interface Card {
   id: string;
-  type: CardType;
   title: string;
   text: string;
-  mediaKey: string;
+  media: MediaItem[];
   viewCount: number;
   likeCount: number;
   createdAt: string;
