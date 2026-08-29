@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { CardsModule } from './cards/cards.module';
+import { TelegramModule } from './telegram/telegram.module';
 import configuration from './config/configuration';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -23,6 +24,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ]),
     PrismaModule,
     CardsModule,
+    TelegramModule,
   ],
   providers: [
     {

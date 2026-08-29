@@ -8,6 +8,17 @@ import { GetCardsQueryDto } from './dto/get-cards-query.dto';
 export class CardsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async create(data: {
+    type: 'PHOTO' | 'VIDEO';
+    title: string;
+    text: string;
+    mediaKey: string;
+    authorUserId?: string;
+    status?: 'DRAFT' | 'PUBLISHED' | 'REMOVED';
+  }) {
+    return this.prisma.card.create({ data });
+  }
+
   async findPublished(query: GetCardsQueryDto) {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
