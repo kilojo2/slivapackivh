@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class GetCardsQueryDto {
   @IsOptional()
@@ -14,4 +14,13 @@ export class GetCardsQueryDto {
   @IsInt()
   @Min(0)
   offset?: number = 0;
+
+  @IsOptional()
+  @IsIn(['latest', 'popular'])
+  sort?: 'latest' | 'popular';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  q?: string;
 }

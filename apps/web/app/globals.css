@@ -340,3 +340,56 @@ a:hover {
   font-size: 22px;
   cursor: pointer;
 }
+.site-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.icon-btn {
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  text-decoration: none;
+}
+.icon-btn:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+.profile-link {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+.profile-link:hover {
+  color: var(--text);
+}
+.site-header nav a.active {
+  color: var(--text);
+  font-weight: 600;
+}
+.btn-bookmark {
+  padding: 8px 10px;
+}
+.btn-bookmark.is-active {
+  color: #facc15;
+  border-color: #facc15;
+}
+.search-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-width: 560px;
+}
+.search-form input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 14px;
+}
+.search-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

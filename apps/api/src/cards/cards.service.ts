@@ -38,11 +38,30 @@ export class CardsService {
   async findPublished(query: GetCardsQueryDto) {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
+    const sort = query.sort ?? 'latest';
+    const q = query.q?.trim();
+
+    const where: Prisma.CardWhereInput = {
+      status: 'PUBLISHED',
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { text: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const orderBy: Prisma.CardOrderByWithRelationInput[] =
+      sort === 'popular'
+        ? [{ likes: { _count: 'desc' } }]
+        : [{ createdAt: 'desc' }];
 
     const [cards, total] = await Promise.all([
       this.prisma.card.findMany({
-        where: { status: 'PUBLISHED' },
-        orderBy: { createdAt: 'desc' },
+        where,
+        orderBy,
         skip: offset,
         take: limit,
         select: {
@@ -55,7 +74,7 @@ export class CardsService {
           _count: { select: { likes: true } },
         },
       }),
-      this.prisma.card.count({ where: { status: 'PUBLISHED' } }),
+      this.prisma.card.count({ where }),
     ]);
 
     const items = cards.map(({ _count, ...card }) => ({
@@ -115,7 +134,6 @@ export class CardsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        // Уже лайкнуто с этого устройства/IP — уникальное ограничение сработало
         return {
           liked: false,
           likeCount: await this.prisma.like.count({ where: { cardId: id } }),

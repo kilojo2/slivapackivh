@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { mediaUrl } from '../lib/api';
+import { isFavorite, toggleFavorite } from '../lib/favorites';
 import type { Card } from '../lib/types';
 import { LikeButton } from './LikeButton';
 
@@ -9,6 +11,7 @@ interface CardItemProps {
   likeCount: number;
   onView: (card: Card) => void;
   onLiked: (count: number) => void;
+  onFavoritesChanged?: () => void;
 }
 
 export function CardItem({
@@ -16,9 +19,17 @@ export function CardItem({
   likeCount,
   onView,
   onLiked,
+  onFavoritesChanged,
 }: CardItemProps) {
   const first = card.media[0];
   const url = first ? mediaUrl(first.mediaKey) : '';
+  const [fav, setFav] = useState(() => isFavorite(card.id));
+
+  function toggleFav() {
+    toggleFavorite(card);
+    setFav(!fav);
+    onFavoritesChanged?.();
+  }
 
   return (
     <article className="card">
@@ -61,6 +72,15 @@ export function CardItem({
             Смотреть
           </button>
           <LikeButton cardId={card.id} likeCount={likeCount} onLiked={onLiked} />
+          <button
+            type="button"
+            className={`btn btn-bookmark ${fav ? 'is-active' : ''}`}
+            onClick={toggleFav}
+            aria-label="В избранное"
+            title={fav ? 'Убрать из избранного' : 'В избранное'}
+          >
+            {fav ? '★' : '☆'}
+          </button>
         </div>
       </div>
     </article>

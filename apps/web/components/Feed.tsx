@@ -6,7 +6,13 @@ import type { Card } from '../lib/types';
 import { CardItem } from './CardItem';
 import { Modal } from './Modal';
 
-export function Feed() {
+interface FeedProps {
+  title?: string;
+  sort?: 'latest' | 'popular';
+  q?: string;
+}
+
+export function Feed({ title = 'Лента', sort, q }: FeedProps) {
   const [cards, setCards] = useState<Card[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -19,7 +25,7 @@ export function Feed() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchCards(nextOffset, 24);
+      const data = await fetchCards(nextOffset, 24, { sort, q });
       setCards((prev) =>
         nextOffset === 0 ? data.items : [...prev, ...data.items],
       );
@@ -30,7 +36,7 @@ export function Feed() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sort, q]);
 
   useEffect(() => {
     void load(0);
@@ -43,7 +49,7 @@ export function Feed() {
 
   return (
     <>
-      <h1>Лента</h1>
+      <h1>{title}</h1>
 
       {error && <p className="error">{error}</p>}
 
@@ -68,7 +74,7 @@ export function Feed() {
       )}
 
       {!loading && cards.length === 0 && (
-        <p className="muted">Пока нет опубликованных карточек.</p>
+        <p className="muted">Ничего не найдено.</p>
       )}
 
       {selected && (

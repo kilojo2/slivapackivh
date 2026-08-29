@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SiteNav } from '../components/SiteNav';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -19,15 +20,26 @@ export default function RootLayout({
           <Link href="/" className="logo">
             SlivaPack
           </Link>
-          <nav>
-            <Link href="/privacy">Политика конфиденциальности</Link>
-            <Link href="/contacts">Контакты</Link>
-          </nav>
+          <SiteNav />
+          <div className="site-actions">
+            <Link href="/search" className="icon-btn" aria-label="Поиск">
+              🔍
+            </Link>
+            <Link href="/favorites" className="icon-btn" aria-label="Избранное">
+              ♡
+            </Link>
+            <Link href="/profile" className="profile-link">
+              Профиль
+            </Link>
+          </div>
         </header>
         <main className="container">{children}</main>
         <footer className="site-footer">
           <p>
-            Контакты:{' '}
+            <Link href="/privacy">Политика конфиденциальности</Link>
+            {' · '}
+            <Link href="/contacts">Контакты</Link>
+            {' · '}
             <a
               href="https://t.me/heroinstead"
               target="_blank"
