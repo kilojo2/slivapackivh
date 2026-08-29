@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Card {
+  id           String     @id @default(cuid())
+  type         CardType   @default(PHOTO)
+  title        String     @db.VarChar(200)
+  text         String     @db.Text
+  mediaKey     String
+  status       CardStatus @default(DRAFT)
+  authorUserId String?
+  viewCount    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  likes Like[]
+
+  @@index([status, createdAt])
+}
+
+model Like {
+  id          String   @id @default(cuid())
+  cardId      String
+  visitorHash String
+  createdAt   DateTime @default(now())
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, visitorHash])
+}
+
+model AllowedUser {
+  id             String   @id @default(cuid())
+  telegramUserId String   @unique
+  role           String   @default("editor")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+}
+
+model RemovalRequest {
+  id        String   @id @default(cuid())
+  cardId    String?
+  reason    String   @db.Text
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+}
+
+model MediaHash {
+  id        String   @id @default(cuid())
+  phash     String   @unique
+  status    String   @default("blocked")
+  createdAt DateTime @default(now())
+}
+
+enum CardType {
+  PHOTO
+  VIDEO
+}
+
+enum CardStatus {
+  DRAFT
+  PUBLISHED
+  REMOVED
+}
