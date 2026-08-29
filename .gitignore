@@ -30,8 +30,8 @@ Thumbs.db
 !.vscode/extensions.json
 
 # Local media / uploads (never in git)
-uploads/
-media/
+/uploads/
+/media/
 
 # Test coverage
 coverage/
