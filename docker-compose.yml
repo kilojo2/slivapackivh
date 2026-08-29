@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: slivapack
+      POSTGRES_PASSWORD: slivapack
+      POSTGRES_DB: slivapack
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://slivapack:slivapack@db:5432/slivapack
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - '3001:3001'
+    depends_on:
+      - db
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api
+        NEXT_PUBLIC_MEDIA_URL: http://localhost:9000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+
+volumes:
+  db-data:

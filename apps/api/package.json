@@ -9,8 +9,10 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit",
+    "test": "node --test test/media.util.test.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
