@@ -16,6 +16,7 @@ import {
   resetSession,
   setSession,
   type DraftData,
+  type MediaItem,
   type SessionData,
 } from './telegram.session';
 
@@ -23,6 +24,15 @@ import {
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
   private bot?: Telegraf;
+  private mediaGroups = new Map<
+    string,
+    {
+      userId: string;
+      items: { type: 'PHOTO' | 'VIDEO'; fileId: string; size?: number }[];
+      timer?: ReturnType<typeof setTimeout>;
+      ctx: any;
+    }
+  >();
 
   constructor(
     private readonly config: ConfigService,
@@ -279,22 +289,112 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handlePhoto(ctx: any) {
-    const session = await getSession(this.prisma, this.uid(ctx));
     const photo = ctx.message?.photo;
     const fileId = photo?.[photo.length - 1]?.file_id;
     if (!fileId) return this.showMainMenu(ctx);
-    if (session?.step === 'awaiting_media') return this.addMediaToDraft(ctx, session, 'PHOTO', fileId);
-    if (session?.step === 'awaiting_append_media') return this.appendMediaToCard(ctx, session, 'PHOTO', fileId);
-    return this.showMainMenu(ctx);
+    return this.enqueueMedia(ctx, 'PHOTO', fileId, photo?.[photo.length - 1]?.file_size);
   }
 
   private async handleVideo(ctx: any) {
-    const session = await getSession(this.prisma, this.uid(ctx));
     const fileId = ctx.message?.video?.file_id;
     if (!fileId) return this.showMainMenu(ctx);
-    if (session?.step === 'awaiting_media') return this.addMediaToDraft(ctx, session, 'VIDEO', fileId);
-    if (session?.step === 'awaiting_append_media') return this.appendMediaToCard(ctx, session, 'VIDEO', fileId);
+    return this.enqueueMedia(ctx, 'VIDEO', fileId, ctx.message?.video?.file_size);
+  }
+
+  private async enqueueMedia(ctx: any, type: 'PHOTO' | 'VIDEO', fileId: string, size?: number) {
+    const groupId = ctx.message?.media_group_id;
+    if (!groupId) {
+      return this.processSingleMedia(ctx, type, fileId);
+    }
+
+    const existing = this.mediaGroups.get(groupId);
+    if (existing) {
+      existing.items.push({ type, fileId, size });
+      existing.ctx = ctx;
+      if (existing.timer) clearTimeout(existing.timer);
+    } else {
+      this.mediaGroups.set(groupId, {
+        userId: this.uid(ctx),
+        items: [{ type, fileId, size }],
+        ctx,
+      });
+    }
+    const entry = this.mediaGroups.get(groupId)!;
+    entry.timer = setTimeout(() => this.flushMediaGroup(groupId), 400);
+  }
+
+  private async processSingleMedia(ctx: any, type: 'PHOTO' | 'VIDEO', fileId: string) {
+    const session = await getSession(this.prisma, this.uid(ctx));
+    if (session?.step === 'awaiting_media') return this.addMediaToDraft(ctx, session, type, fileId);
+    if (session?.step === 'awaiting_append_media') return this.appendMediaToCard(ctx, session, type, fileId);
     return this.showMainMenu(ctx);
+  }
+
+  private async flushMediaGroup(groupId: string) {
+    const entry = this.mediaGroups.get(groupId);
+    this.mediaGroups.delete(groupId);
+    if (!entry) return;
+
+    const ctx = entry.ctx;
+    const maxOf = (type: 'PHOTO' | 'VIDEO') =>
+      type === 'VIDEO' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+
+    if (entry.items.some((i) => i.size && i.size > maxOf(i.type))) {
+      await ctx.reply('❌ Один из файлов слишком большой.');
+      return;
+    }
+
+    const processed: MediaItem[] = [];
+    try {
+      for (const item of entry.items) {
+        processed.push(await this.processMediaFile(ctx, item.fileId, item.type));
+      }
+    } catch (e) {
+      this.logger.error('flushMediaGroup', e as Error);
+      await ctx.reply('❌ Не удалось обработать файлы. Попробуйте снова.');
+      return;
+    }
+
+    const session = await getSession(this.prisma, entry.userId);
+
+    if (session?.step === 'awaiting_media') {
+      const draft = session.draft ?? {};
+      const items = [...(draft.media ?? []), ...processed];
+      await setSession(this.prisma, entry.userId, {
+        step: 'awaiting_media',
+        draft: { ...draft, media: items },
+      });
+      await ctx.reply(
+        `✅ Добавлено ${processed.length} файлов (всего: ${items.length}). Пришлите ещё или нажмите «Готово».`,
+        { reply_markup: menus.MEDIA_MORE },
+      );
+    } else if (session?.step === 'awaiting_append_media' && session.editingCardId) {
+      const id = session.editingCardId;
+      const last = await this.prisma.media.findFirst({
+        where: { cardId: id },
+        orderBy: { sort: 'desc' },
+        select: { sort: true },
+      });
+      let sort = (last?.sort ?? -1) + 1;
+      for (const m of processed) {
+        await this.prisma.media.create({
+          data: { cardId: id, type: m.type, mediaKey: m.mediaKey, sort: sort++ },
+        });
+      }
+      await resetSession(this.prisma, entry.userId);
+      await ctx.reply(`✅ Добавлено ${processed.length} файлов.`);
+      await this.showCard(ctx, id, false);
+    } else {
+      await this.showMainMenu(ctx);
+    }
+  }
+
+  private async processMediaFile(ctx: any, fileId: string, type: 'PHOTO' | 'VIDEO'): Promise<MediaItem> {
+    const buffer = await this.downloadMedia(ctx, fileId);
+    const media = type === 'VIDEO'
+      ? await this.mediaService.processVideo(buffer)
+      : await this.mediaService.processImage(buffer);
+    return { type, mediaKey: media.key };
   }
 
   private async addMediaToDraft(ctx: any, session: SessionData, type: 'PHOTO' | 'VIDEO', fileId: string) {
