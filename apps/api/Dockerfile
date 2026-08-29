@@ -8,4 +8,4 @@ RUN npm run build -w @slivapack/api
 
 WORKDIR /app/apps/api
 EXPOSE 3001
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
