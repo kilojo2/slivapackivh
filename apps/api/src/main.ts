@@ -17,10 +17,16 @@ async function bootstrap() {
   app.use(helmet());
 
   // CORS: только разрешённые origin
-  const corsOrigin = config.get<string>('CORS_ORIGIN');
+  const corsOrigin = (config.get<string>('CORS_ORIGIN') ?? '').trim();
+  let origin: boolean | string | string[] = false;
+  if (corsOrigin === '*') {
+    origin = '*';
+  } else if (corsOrigin) {
+    origin = corsOrigin.split(',').map((o) => o.trim());
+  }
   app.enableCors({
-    origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : false,
-    credentials: true,
+    origin,
+    credentials: false,
   });
 
   // Глобальная валидация входа: лишние поля отбрасываются
