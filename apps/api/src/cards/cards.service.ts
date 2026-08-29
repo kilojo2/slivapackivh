@@ -14,6 +14,8 @@ export class CardsService {
     media: { type: 'PHOTO' | 'VIDEO'; mediaKey: string }[];
     authorUserId?: string;
     status?: 'DRAFT' | 'PUBLISHED' | 'REMOVED';
+    age?: number;
+    city?: string;
   }) {
     return this.prisma.card.create({
       data: {
@@ -21,6 +23,8 @@ export class CardsService {
         text: data.text,
         authorUserId: data.authorUserId,
         status: data.status,
+        age: data.age,
+        city: data.city,
         media: {
           create: data.media.map((m, i) => ({
             type: m.type,
@@ -51,6 +55,20 @@ export class CardsService {
             ],
           }
         : {}),
+      ...(query.type === 'photo' ? { media: { some: { type: 'PHOTO' } } } : {}),
+      ...(query.type === 'video' ? { media: { some: { type: 'VIDEO' } } } : {}),
+      ...(query.ageMin !== undefined || query.ageMax !== undefined
+        ? {
+            age: {
+              ...(query.ageMin !== undefined ? { gte: query.ageMin } : {}),
+              ...(query.ageMax !== undefined ? { lte: query.ageMax } : {}),
+            },
+          }
+        : {}),
+      ...(query.city ? { city: { contains: query.city, mode: 'insensitive' } } : {}),
+      ...(query.days
+        ? { createdAt: { gte: new Date(Date.now() - query.days * 86400000) } }
+        : {}),
     };
 
     const orderBy: Prisma.CardOrderByWithRelationInput[] =
@@ -68,6 +86,8 @@ export class CardsService {
           id: true,
           title: true,
           text: true,
+          age: true,
+          city: true,
           viewCount: true,
           createdAt: true,
           media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },
@@ -85,6 +105,18 @@ export class CardsService {
     return { items, total, limit, offset };
   }
 
+  async getCities() {
+    const rows = await this.prisma.card.findMany({
+      where: { status: 'PUBLISHED', city: { not: null } },
+      distinct: ['city'],
+      select: { city: true },
+    });
+    return rows
+      .map((r) => r.city)
+      .filter((c): c is string => !!c)
+      .sort();
+  }
+
   async view(id: string) {
     const card = await this.prisma.card.findFirst({
       where: { id, status: 'PUBLISHED' },
@@ -92,6 +124,8 @@ export class CardsService {
         id: true,
         title: true,
         text: true,
+        age: true,
+        city: true,
         viewCount: true,
         createdAt: true,
         media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },

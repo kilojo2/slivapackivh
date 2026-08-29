@@ -11,6 +11,8 @@ model Card {
   id           String     @id @default(cuid())
   title        String     @db.VarChar(200)
   text         String     @db.Text
+  age          Int?
+  city         String?
   status       CardStatus @default(DRAFT)
   authorUserId String?
   viewCount    Int        @default(0)

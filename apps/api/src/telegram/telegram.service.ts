@@ -226,6 +226,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (data === 'add:media_done') return this.finishMedia(ctx);
     if (data === 'add:more_media') return this.moreMedia(ctx);
     if (data === 'add:skip_text') return this.saveAddText(ctx, '');
+    if (data === 'add:skip_age') return this.skipAge(ctx);
+    if (data === 'add:skip_city') return this.skipCity(ctx);
     if (data === 'add:publish') return this.commitAdd(ctx, 'PUBLISHED');
     if (data === 'add:save_draft') return this.commitAdd(ctx, 'DRAFT');
     if (data === 'add:edit_title') return this.editAddTitle(ctx);
@@ -275,6 +277,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return this.saveAddTitle(ctx, session, text);
       case 'awaiting_text':
         return this.saveAddText(ctx, text);
+      case 'awaiting_age':
+        return this.saveAddAge(ctx, session, text);
+      case 'awaiting_city':
+        return this.saveAddCity(ctx, session, text);
       case 'awaiting_add_title':
         return this.saveAddTitleEdit(ctx, session, text);
       case 'awaiting_add_text':
@@ -452,6 +458,37 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private async saveAddText(ctx: any, text: string) {
     const session = await getSession(this.prisma, this.uid(ctx));
     const draft = { ...(session?.draft ?? {}), text: text.trim() };
+    await setSession(this.prisma, this.uid(ctx), { step: 'awaiting_age', draft });
+    await ctx.reply('Укажите возраст (число) или нажмите «Пропустить».', { reply_markup: menus.skipKeyboard('add:skip_age') });
+  }
+
+  private async saveAddAge(ctx: any, session: SessionData, text: string) {
+    const value = parseInt(text.trim(), 10);
+    if (Number.isNaN(value) || value < 18 || value > 99) {
+      await ctx.reply('Пожалуйста, пришлите число от 18 до 99 или нажмите «Пропустить».', { reply_markup: menus.skipKeyboard('add:skip_age') });
+      return;
+    }
+    const draft = { ...(session.draft ?? {}), age: value };
+    await setSession(this.prisma, this.uid(ctx), { step: 'awaiting_city', draft });
+    await ctx.reply('Укажите город или нажмите «Пропустить».', { reply_markup: menus.skipKeyboard('add:skip_city') });
+  }
+
+  private async saveAddCity(ctx: any, session: SessionData, text: string) {
+    const draft = { ...(session.draft ?? {}), city: text.trim() || undefined };
+    await setSession(this.prisma, this.uid(ctx), { step: 'idle', draft });
+    await this.showAddPreview(ctx, draft);
+  }
+
+  private async skipAge(ctx: any) {
+    const session = await getSession(this.prisma, this.uid(ctx));
+    const draft = { ...(session?.draft ?? {}), age: undefined };
+    await setSession(this.prisma, this.uid(ctx), { step: 'awaiting_city', draft });
+    await ctx.reply('Укажите город или нажмите «Пропустить».', { reply_markup: menus.skipKeyboard('add:skip_city') });
+  }
+
+  private async skipCity(ctx: any) {
+    const session = await getSession(this.prisma, this.uid(ctx));
+    const draft = { ...(session?.draft ?? {}), city: undefined };
     await setSession(this.prisma, this.uid(ctx), { step: 'idle', draft });
     await this.showAddPreview(ctx, draft);
   }
@@ -481,6 +518,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       media: (draft.media ?? []).map((m) => ({ type: m.type, mediaKey: m.mediaKey })),
       authorUserId: this.uid(ctx),
       status,
+      age: draft.age,
+      city: draft.city,
     });
     await resetSession(this.prisma, this.uid(ctx));
     const label = status === 'PUBLISHED' ? '✅ Опубликовано' : '💾 Сохранено в черновик';

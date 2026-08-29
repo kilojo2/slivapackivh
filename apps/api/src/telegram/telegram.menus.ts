@@ -82,3 +82,10 @@ export function confirm(action: string, id: string, label: string) {
     [Markup.button.callback('❌ Нет', `card:edit:${id}`)],
   ]).reply_markup;
 }
+
+export function skipKeyboard(action: string) {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('⏭ Пропустить', action)],
+    [Markup.button.callback('❌ Отмена', 'menu')],
+  ]).reply_markup;
+}

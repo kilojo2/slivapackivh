@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Card" ADD COLUMN "age" INTEGER;
+ALTER TABLE "Card" ADD COLUMN "city" TEXT;

@@ -5,6 +5,8 @@ export type BotStep =
   | 'awaiting_media'
   | 'awaiting_title'
   | 'awaiting_text'
+  | 'awaiting_age'
+  | 'awaiting_city'
   | 'awaiting_add_title'
   | 'awaiting_add_text'
   | 'awaiting_edit_title'
@@ -20,6 +22,8 @@ export interface DraftData {
   media?: MediaItem[];
   title?: string;
   text?: string;
+  age?: number;
+  city?: string;
 }
 
 export interface SessionData {

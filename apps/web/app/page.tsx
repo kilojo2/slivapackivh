@@ -1,5 +1,5 @@
 import { Feed } from '../components/Feed';
 
 export default function HomePage() {
-  return <Feed title="Лента" />;
+  return <Feed title="Лента" showFilters />;
 }

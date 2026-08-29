@@ -23,4 +23,34 @@ export class GetCardsQueryDto {
   @IsString()
   @MaxLength(200)
   q?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  days?: number;
+
+  @IsOptional()
+  @IsIn(['photo', 'video'])
+  type?: 'photo' | 'video';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(18)
+  @Max(99)
+  ageMin?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(18)
+  @Max(99)
+  ageMax?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
 }

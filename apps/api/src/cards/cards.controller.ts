@@ -19,6 +19,11 @@ export class CardsController {
     return this.cardsService.findPublished(query);
   }
 
+  @Get('cities')
+  getCities() {
+    return this.cardsService.getCities();
+  }
+
   @Get(':id')
   getCard(@Param('id') id: string) {
     return this.cardsService.view(id);
