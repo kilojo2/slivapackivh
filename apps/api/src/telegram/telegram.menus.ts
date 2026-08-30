@@ -67,6 +67,9 @@ export function cardActions(card: { id: string; status: string }) {
     Markup.button.callback('✏️ Описание', `card:edit_text:${card.id}`),
   ]);
   rows.push([Markup.button.callback('➕ Добавить медиа', `card:append:${card.id}`)]);
+  if (card.status !== 'REMOVED') {
+    rows.push([Markup.button.callback('🏷 Источник', `card:source:${card.id}`)]);
+  }
   rows.push([
     card.status === 'REMOVED'
       ? Markup.button.callback('🗑 Удалить навсегда', `card:purge:${card.id}`)
@@ -96,3 +99,13 @@ export const SOURCE = Markup.inlineKeyboard([
   ],
   [Markup.button.callback('⏭ Пропустить', 'add:skip_source')],
 ]).reply_markup;
+export function sourcePicker(id: string) {
+  return Markup.inlineKeyboard([
+    [
+      Markup.button.callback('OnlyFans', `card:setsource:onlyfans:${id}`),
+      Markup.button.callback('TikTok', `card:setsource:tiktok:${id}`),
+    ],
+    [Markup.button.callback('❌ Убрать', `card:setsource:none:${id}`)],
+    [Markup.button.callback('🔙 Назад', `card:edit:${id}`)],
+  ]).reply_markup;
+}

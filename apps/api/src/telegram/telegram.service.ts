@@ -171,7 +171,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         : card.status === 'DRAFT'
           ? '🟡 Черновик'
           : '🔴 Удалена';
-    const caption = `${prefix ? prefix + '\n\n' : ''}${this.cardCaption(card)}\n\n${status} · ❤️ ${card._count.likes} · 👁 ${card.viewCount}`;
+    const srcLabel =
+      card.source === 'onlyfans'
+        ? ' · OnlyFans'
+        : card.source === 'tiktok'
+          ? ' · TikTok'
+          : '';
+    const caption = `${prefix ? prefix + '\n\n' : ''}${this.cardCaption(card)}\n\n${status}${srcLabel} · ❤️ ${card._count.likes} · 👁 ${card.viewCount}`;
     const keyboard = menus.cardActions(card);
     if (edit) {
       try {
@@ -273,8 +279,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (data.startsWith('card:')) {
       const parts = data.split(':');
       if (parts.length === 2) return this.showCard(ctx, parts[1], false);
-      const [, action, id] = parts;
+      const action = parts[1];
+      if (action === 'setsource') return this.setCardSource(ctx, parts[3], parts[2]);
+      const id = parts[2];
       if (action === 'edit') return this.showCard(ctx, id, true);
+      if (action === 'source') return this.editCardSource(ctx, id);
       if (action === 'publish') return this.setCardStatus(ctx, id, 'PUBLISHED');
       if (action === 'unpublish') return this.setCardStatus(ctx, id, 'DRAFT');
       if (action === 'restore') return this.setCardStatus(ctx, id, 'DRAFT');
@@ -652,6 +661,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private async editCardText(ctx: any, id: string) {
     await setSession(this.prisma, this.uid(ctx), { step: 'awaiting_edit_text', editingCardId: id });
     await ctx.reply('Пришлите новое описание:');
+  }
+
+  private async editCardSource(ctx: any, id: string) {
+    await ctx.editMessageCaption('🏷 Выберите источник:', { reply_markup: menus.sourcePicker(id) });
+  }
+
+  private async setCardSource(ctx: any, id: string, source: string) {
+    await this.prisma.card.updateMany({
+      where: { id },
+      data: { source: source === 'none' ? null : source },
+    });
+    await this.answerCb(ctx, 'Источник обновлён');
+    await this.showCard(ctx, id, true);
   }
 
   private async appendCardMedia(ctx: any, id: string) {
