@@ -1,28 +1,37 @@
 /* eslint-disable no-console */
-// Добавляет/активирует пользователя Telegram в allowlist (кто может публиковать).
+// Добавляет/активирует пользователей Telegram в allowlist.
 // Запуск: npm run prisma:seed -w @slivapack/api
-// Требует: TELEGRAM_ALLOWED_USER_ID и рабочую DATABASE_URL.
+// Требует: TELEGRAM_ALLOWED_USER_IDS (через запятую) или TELEGRAM_ALLOWED_USER_ID.
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const userId = process.env.TELEGRAM_ALLOWED_USER_ID;
-  if (!userId) {
+  const raw =
+    process.env.TELEGRAM_ALLOWED_USER_IDS ||
+    process.env.TELEGRAM_ALLOWED_USER_ID ||
+    '';
+  const ids = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (ids.length === 0) {
     console.error(
-      'Укажите TELEGRAM_ALLOWED_USER_ID (Telegram user id того, кому разрешено публиковать).',
+      'Укажите TELEGRAM_ALLOWED_USER_IDS (через запятую) или TELEGRAM_ALLOWED_USER_ID.',
     );
     process.exitCode = 1;
     return;
   }
 
-  await prisma.allowedUser.upsert({
-    where: { telegramUserId: userId },
-    update: { isActive: true },
-    create: { telegramUserId: userId, role: 'editor', isActive: true },
-  });
-
-  console.log(`Allowed user добавлен/активирован: ${userId}`);
+  for (const id of ids) {
+    await prisma.allowedUser.upsert({
+      where: { telegramUserId: id },
+      update: { isActive: true },
+      create: { telegramUserId: id, role: 'editor', isActive: true },
+    });
+    console.log(`Allowed user добавлен/активирован: ${id}`);
+  }
 }
 
 main()

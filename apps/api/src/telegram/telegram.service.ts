@@ -91,10 +91,39 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     bot.start((ctx: any) => this.showMainMenu(ctx));
     bot.help((ctx: any) => this.showHelp(ctx));
     bot.command('menu', (ctx: any) => this.showMainMenu(ctx));
+    bot.command('add', (ctx: any) => this.handleAddUser(ctx));
+    bot.command('remove', (ctx: any) => this.handleRemoveUser(ctx));
     bot.on('callback_query', (ctx: any) => this.handleCallback(ctx));
     bot.on('text', (ctx: any) => this.handleText(ctx));
     bot.on('photo', (ctx: any) => this.handlePhoto(ctx));
     bot.on('video', (ctx: any) => this.handleVideo(ctx));
+  }
+
+  private async handleAddUser(ctx: any) {
+    const arg = (ctx.message?.text ?? '').trim().split(/\s+/)[1];
+    const userId = (arg ?? '').replace(/[^0-9]/g, '');
+    if (!userId) {
+      return ctx.reply('Формат: /add <числовой id>\nНапример: /add 123456789');
+    }
+    await this.prisma.allowedUser.upsert({
+      where: { telegramUserId: userId },
+      update: { isActive: true },
+      create: { telegramUserId: userId, role: 'editor', isActive: true },
+    });
+    await ctx.reply(`✅ Пользователь ${userId} добавлен в доступ.`);
+  }
+
+  private async handleRemoveUser(ctx: any) {
+    const arg = (ctx.message?.text ?? '').trim().split(/\s+/)[1];
+    const userId = (arg ?? '').replace(/[^0-9]/g, '');
+    if (!userId) {
+      return ctx.reply('Формат: /remove <числовой id>');
+    }
+    await this.prisma.allowedUser.updateMany({
+      where: { telegramUserId: userId },
+      data: { isActive: false },
+    });
+    await ctx.reply(`🗑 Пользователь ${userId} отключён.`);
   }
 
   private async answerCb(ctx: any, text?: string) {
