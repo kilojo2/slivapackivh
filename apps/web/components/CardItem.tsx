@@ -40,7 +40,7 @@ export function CardItem({
         aria-label={`Открыть: ${card.title}`}
       >
         {first?.type === 'VIDEO' ? (
-          <video src={url} preload="metadata" muted playsInline />
+          <video src={url} preload="none" muted playsInline />
         ) : (
           <img src={url} alt={card.title} loading="lazy" />
         )}

@@ -99,10 +99,12 @@ a:hover {
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.card:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 24px rgba(255, 45, 103, 0.12);
-  border-color: rgba(255, 45, 103, 0.25);
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 24px rgba(255, 45, 103, 0.12);
+    border-color: rgba(255, 45, 103, 0.25);
+  }
 }
 .card-media {
   position: relative;
@@ -123,9 +125,11 @@ a:hover {
   object-fit: cover;
   transition: transform 0.3s ease;
 }
-.card:hover .card-media img,
-.card:hover .card-media video {
-  transform: scale(1.04);
+@media (hover: hover) {
+  .card:hover .card-media img,
+  .card:hover .card-media video {
+    transform: scale(1.04);
+  }
 }
 .media-scrim {
   position: absolute;
@@ -135,8 +139,10 @@ a:hover {
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
-.card:hover .media-scrim {
-  opacity: 0.85;
+@media (hover: hover) {
+  .card:hover .media-scrim {
+    opacity: 0.85;
+  }
 }
 .media-cta {
   position: absolute;
@@ -155,9 +161,11 @@ a:hover {
   pointer-events: none;
   white-space: nowrap;
 }
-.card:hover .media-cta {
-  opacity: 1;
-  transform: translate(-50%, -50%);
+@media (hover: hover) {
+  .card:hover .media-cta {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 .card-media .badge {
   position: absolute;
@@ -469,4 +477,80 @@ h1 {
   font-weight: 700;
   line-height: 1.2;
   margin: 0 0 16px;
+}
+
+/* --- Mobile / iOS / accessibility --- */
+@media (max-width: 767px) {
+  .site-header {
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .site-header nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .site-header nav::-webkit-scrollbar {
+    display: none;
+  }
+  .site-header nav a {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .site-actions {
+    margin-left: auto;
+  }
+  .btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+  .btn-bookmark {
+    min-width: 44px;
+  }
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .gallery-nav button {
+    width: 44px;
+    height: 44px;
+  }
+  .container {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .site-header {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .site-footer {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .modal-backdrop {
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+}
+
+.modal {
+  max-height: 90dvh;
+}
+.modal-media-frame {
+  height: min(60dvh, 520px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

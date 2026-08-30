@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchCards, fetchCities, type FetchCardsOptions } from '../lib/api';
 import type { Card } from '../lib/types';
 import { CardItem } from './CardItem';
@@ -36,6 +36,7 @@ export function Feed({ title = 'Лента', sort, q, showFilters = false }: Fee
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
   const [cities, setCities] = useState<string[]>([]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (showFilters) {
@@ -90,6 +91,21 @@ export function Feed({ title = 'Лента', sort, q, showFilters = false }: Fee
   useEffect(() => {
     void load(0);
   }, [load]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loading && offset < total) {
+          void load(offset);
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [load, loading, offset, total]);
 
   function handleLiked(cardId: string) {
     return (count: number) =>
@@ -176,11 +192,7 @@ export function Feed({ title = 'Лента', sort, q, showFilters = false }: Fee
 
       {loading && <p className="muted">Загрузка…</p>}
 
-      {!loading && offset < total && (
-        <button className="btn load-more" onClick={() => void load(offset)}>
-          Показать ещё
-        </button>
-      )}
+      <div ref={sentinelRef} style={{ height: 1 }} />
 
       {!loading && cards.length === 0 && (
         <p className="muted">Ничего не найдено.</p>

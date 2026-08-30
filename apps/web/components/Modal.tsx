@@ -42,8 +42,13 @@ export function Modal({ card, likeCount, onClose, onLiked }: ModalProps) {
         </button>
 
         <div className="modal-media-frame">
-          {card.media.map((m, i) =>
-            m.type === 'VIDEO' ? (
+          {card.media.map((m, i) => {
+            const inRange =
+              i === index ||
+              i === (index - 1 + total) % total ||
+              i === (index + 1) % total;
+            if (!inRange) return null;
+            return m.type === 'VIDEO' ? (
               i === index ? (
                 <video
                   key={m.mediaKey}
@@ -61,8 +66,8 @@ export function Modal({ card, likeCount, onClose, onLiked }: ModalProps) {
                 loading="eager"
                 className={`modal-media ${i === index ? 'active' : ''}`}
               />
-            ),
-          )}
+            );
+          })}
         </div>
 
         {total > 1 && (
