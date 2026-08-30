@@ -100,7 +100,7 @@ a:hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.01);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 24px rgba(255, 45, 103, 0.12);
   border-color: rgba(255, 45, 103, 0.25);
 }
@@ -227,11 +227,11 @@ a:hover {
   border-color: var(--accent);
   color: #fff;
   box-shadow: 0 0 0 rgba(255, 45, 103, 0);
-  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
 }
 .btn-primary:hover {
-  opacity: 0.95;
-  box-shadow: 0 0 18px rgba(255, 45, 103, 0.35);
+  filter: brightness(1.12);
+  box-shadow: 0 0 18px rgba(255, 45, 103, 0.4);
 }
 .btn-like.is-liked {
   color: var(--accent);
