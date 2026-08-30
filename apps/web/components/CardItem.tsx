@@ -62,6 +62,7 @@ export function CardItem({
 
       <div className="card-body">
         <h2 className="card-title">{card.title}</h2>
+        {card.city && <p className="card-subtitle">{card.city}</p>}
         <p className="card-text">{card.text}</p>
         <div className="card-actions">
           <button
