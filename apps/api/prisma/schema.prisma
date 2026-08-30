@@ -13,6 +13,7 @@ model Card {
   text         String     @db.Text
   age          Int?
   city         String?
+  source       String?
   status       CardStatus @default(DRAFT)
   authorUserId String?
   viewCount    Int        @default(0)

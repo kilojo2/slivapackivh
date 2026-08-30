@@ -16,6 +16,7 @@ export class CardsService {
     status?: 'DRAFT' | 'PUBLISHED' | 'REMOVED';
     age?: number;
     city?: string;
+    source?: string;
   }) {
     return this.prisma.card.create({
       data: {
@@ -25,6 +26,7 @@ export class CardsService {
         status: data.status,
         age: data.age,
         city: data.city,
+        source: data.source,
         media: {
           create: data.media.map((m, i) => ({
             type: m.type,
@@ -66,6 +68,7 @@ export class CardsService {
           }
         : {}),
       ...(query.city ? { city: { contains: query.city, mode: 'insensitive' } } : {}),
+      ...(query.source ? { source: query.source } : {}),
       ...(query.days
         ? { createdAt: { gte: new Date(Date.now() - query.days * 86400000) } }
         : {}),
@@ -88,6 +91,7 @@ export class CardsService {
           text: true,
           age: true,
           city: true,
+          source: true,
           viewCount: true,
           createdAt: true,
           media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },
@@ -126,6 +130,7 @@ export class CardsService {
         text: true,
         age: true,
         city: true,
+        source: true,
         viewCount: true,
         createdAt: true,
         media: { orderBy: { sort: 'asc' }, select: { type: true, mediaKey: true } },

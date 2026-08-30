@@ -7,6 +7,7 @@ export type BotStep =
   | 'awaiting_text'
   | 'awaiting_age'
   | 'awaiting_city'
+  | 'awaiting_source'
   | 'awaiting_add_title'
   | 'awaiting_add_text'
   | 'awaiting_edit_title'
@@ -24,6 +25,7 @@ export interface DraftData {
   text?: string;
   age?: number;
   city?: string;
+  source?: string;
 }
 
 export interface SessionData {

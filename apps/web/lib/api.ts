@@ -10,6 +10,7 @@ export interface FetchCardsOptions {
   ageMin?: number;
   ageMax?: number;
   city?: string;
+  source?: string;
 }
 
 export async function fetchCards(
@@ -27,6 +28,7 @@ export async function fetchCards(
   if (options.ageMin !== undefined) params.set('ageMin', String(options.ageMin));
   if (options.ageMax !== undefined) params.set('ageMax', String(options.ageMax));
   if (options.city) params.set('city', options.city);
+  if (options.source) params.set('source', options.source);
   const res = await fetch(`${API_URL}/cards?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch cards: ${res.status}`);

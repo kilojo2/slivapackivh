@@ -36,6 +36,10 @@ export class GetCardsQueryDto {
   type?: 'photo' | 'video';
 
   @IsOptional()
+  @IsIn(['onlyfans', 'tiktok'])
+  source?: 'onlyfans' | 'tiktok';
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(18)

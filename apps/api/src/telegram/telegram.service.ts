@@ -257,6 +257,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (data === 'add:skip_text') return this.saveAddText(ctx, '');
     if (data === 'add:skip_age') return this.skipAge(ctx);
     if (data === 'add:skip_city') return this.skipCity(ctx);
+    if (data === 'add:source:onlyfans') return this.setSource(ctx, 'onlyfans');
+    if (data === 'add:source:tiktok') return this.setSource(ctx, 'tiktok');
+    if (data === 'add:skip_source') return this.skipSource(ctx);
     if (data === 'add:publish') return this.commitAdd(ctx, 'PUBLISHED');
     if (data === 'add:save_draft') return this.commitAdd(ctx, 'DRAFT');
     if (data === 'add:edit_title') return this.editAddTitle(ctx);
@@ -504,6 +507,20 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   private async saveAddCity(ctx: any, session: SessionData, text: string) {
     const draft = { ...(session.draft ?? {}), city: text.trim() || undefined };
+    await setSession(this.prisma, this.uid(ctx), { step: 'awaiting_source', draft });
+    await ctx.reply('Выберите источник (или нажмите «Пропустить»).', { reply_markup: menus.SOURCE });
+  }
+
+  private async setSource(ctx: any, source: string) {
+    const session = await getSession(this.prisma, this.uid(ctx));
+    const draft = { ...(session?.draft ?? {}), source };
+    await setSession(this.prisma, this.uid(ctx), { step: 'idle', draft });
+    await this.showAddPreview(ctx, draft);
+  }
+
+  private async skipSource(ctx: any) {
+    const session = await getSession(this.prisma, this.uid(ctx));
+    const draft = { ...(session?.draft ?? {}), source: undefined };
     await setSession(this.prisma, this.uid(ctx), { step: 'idle', draft });
     await this.showAddPreview(ctx, draft);
   }
@@ -518,8 +535,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private async skipCity(ctx: any) {
     const session = await getSession(this.prisma, this.uid(ctx));
     const draft = { ...(session?.draft ?? {}), city: undefined };
-    await setSession(this.prisma, this.uid(ctx), { step: 'idle', draft });
-    await this.showAddPreview(ctx, draft);
+    await setSession(this.prisma, this.uid(ctx), { step: 'awaiting_source', draft });
+    await ctx.reply('Выберите источник (или нажмите «Пропустить»).', { reply_markup: menus.SOURCE });
   }
 
   private async showAddPreview(ctx: any, draft: DraftData) {
@@ -549,6 +566,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       status,
       age: draft.age,
       city: draft.city,
+      source: draft.source,
     });
     await resetSession(this.prisma, this.uid(ctx));
     const label = status === 'PUBLISHED' ? '✅ Опубликовано' : '💾 Сохранено в черновик';

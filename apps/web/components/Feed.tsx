@@ -11,6 +11,8 @@ interface FeedProps {
   sort?: 'latest' | 'popular';
   q?: string;
   showFilters?: boolean;
+  days?: number;
+  source?: string;
 }
 
 const AGE_OPTIONS = [
@@ -20,7 +22,7 @@ const AGE_OPTIONS = [
   { label: '26+', value: '26-' },
 ];
 
-export function Feed({ title = 'Лента', sort, q, showFilters = false }: FeedProps) {
+export function Feed({ title = 'Лента', sort, q, showFilters = false, days, source }: FeedProps) {
   const [cards, setCards] = useState<Card[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -52,6 +54,8 @@ export function Feed({ title = 'Лента', sort, q, showFilters = false }: Fee
         : 'latest'
       : (sort ?? 'latest');
     if (showFilters && tab === 'new') options.days = 7;
+    if (days) options.days = days;
+    if (source) options.source = source;
     const qq = (q ?? '').trim() || search.trim();
     if (qq) options.q = qq;
     if (type !== 'all') options.type = type;
@@ -66,7 +70,7 @@ export function Feed({ title = 'Лента', sort, q, showFilters = false }: Fee
     }
     if (city) options.city = city;
     return options;
-  }, [showFilters, tab, sort, q, search, type, age, city]);
+  }, [showFilters, tab, sort, q, search, type, age, city, days, source]);
 
   const load = useCallback(
     async (nextOffset: number) => {

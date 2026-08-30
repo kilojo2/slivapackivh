@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation';
 
 const items = [
   { href: '/', label: 'Лента' },
+  { href: '/new', label: 'New' },
+  { href: '/onlyfans', label: 'OnlyFans' },
+  { href: '/tiktok', label: 'TikTok' },
   { href: '/popular', label: 'Популярное' },
-  { href: '/new', label: 'Новинки' },
   { href: '/favorites', label: 'Избранное' },
 ];
 

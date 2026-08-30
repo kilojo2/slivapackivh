@@ -11,6 +11,7 @@ export interface Card {
   text: string;
   age?: number;
   city?: string;
+  source?: string;
   media: MediaItem[];
   viewCount: number;
   likeCount: number;

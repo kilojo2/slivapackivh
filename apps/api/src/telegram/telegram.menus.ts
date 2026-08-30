@@ -89,3 +89,10 @@ export function skipKeyboard(action: string) {
     [Markup.button.callback('❌ Отмена', 'menu')],
   ]).reply_markup;
 }
+export const SOURCE = Markup.inlineKeyboard([
+  [
+    Markup.button.callback('OnlyFans', 'add:source:onlyfans'),
+    Markup.button.callback('TikTok', 'add:source:tiktok'),
+  ],
+  [Markup.button.callback('⏭ Пропустить', 'add:skip_source')],
+]).reply_markup;
