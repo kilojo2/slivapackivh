@@ -15,7 +15,6 @@ interface ModalProps {
 export function Modal({ card, likeCount, onClose, onLiked }: ModalProps) {
   const [index, setIndex] = useState(0);
   const total = card.media.length;
-  const current = card.media[index];
 
   function prev() {
     setIndex((i) => (i - 1 + total) % total);
@@ -42,22 +41,29 @@ export function Modal({ card, likeCount, onClose, onLiked }: ModalProps) {
           ×
         </button>
 
-        {current?.type === 'VIDEO' ? (
-          <video
-            key={current.mediaKey}
-            src={mediaUrl(current.mediaKey)}
-            controls
-            autoPlay
-            className="modal-media"
-          />
-        ) : (
-          <img
-            key={current.mediaKey}
-            src={mediaUrl(current.mediaKey)}
-            alt={card.title}
-            className="modal-media"
-          />
-        )}
+        <div className="modal-media-frame">
+          {card.media.map((m, i) =>
+            m.type === 'VIDEO' ? (
+              i === index ? (
+                <video
+                  key={m.mediaKey}
+                  src={mediaUrl(m.mediaKey)}
+                  controls
+                  autoPlay
+                  className="modal-media active"
+                />
+              ) : null
+            ) : (
+              <img
+                key={m.mediaKey}
+                src={mediaUrl(m.mediaKey)}
+                alt={card.title}
+                loading="eager"
+                className={`modal-media ${i === index ? 'active' : ''}`}
+              />
+            ),
+          )}
+        </div>
 
         {total > 1 && (
           <div className="gallery-nav">
