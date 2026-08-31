@@ -9,6 +9,7 @@ import { Telegraf } from 'telegraf';
 import { CardsService } from '../cards/cards.service';
 import { MediaService } from '../media/media.service';
 import { StorageService } from '../media/storage.service';
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '../media/media.util';
 import { PrismaService } from '../prisma/prisma.service';
 import * as menus from './telegram.menus';
 import {
@@ -143,10 +144,23 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async downloadMedia(ctx: any, fileId: string): Promise<Buffer> {
-    const link = await ctx.telegram.getFileLink(fileId);
-    const res = await fetch(String(link));
-    if (!res.ok) throw new Error(`download failed: ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
+    try {
+      const link = await ctx.telegram.getFileLink(fileId);
+      const res = await fetch(String(link));
+      if (!res.ok) throw new Error(`download failed: ${res.status}`);
+      return Buffer.from(await res.arrayBuffer());
+    } catch (e) {
+      this.logger.error('downloadMedia', e as Error);
+      throw new Error(
+        'Не удалось скачать файл — Telegram позволяет ботам скачивать файлы до 20 МБ. Пришлите сжатое видео или более короткий ролик.',
+      );
+    }
+  }
+
+  private mediaErrorMessage(e: unknown): string {
+    const msg = e instanceof Error ? e.message : '';
+    if (/МБ|слишком больш|скачать|размер/i.test(msg)) return `❌ ${msg}`;
+    return '❌ Не удалось обработать файл. Попробуйте другой.';
   }
 
   private cardCaption(card: { title: string; text: string; viewCount: number }): string {
@@ -384,10 +398,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     const ctx = entry.ctx;
     const maxOf = (type: 'PHOTO' | 'VIDEO') =>
-      type === 'VIDEO' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      type === 'VIDEO' ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
 
     if (entry.items.some((i) => i.size && i.size > maxOf(i.type))) {
-      await ctx.reply('❌ Один из файлов слишком большой.');
+      await ctx.reply(
+        '❌ Один из файлов слишком большой. Лимит Telegram: видео до 20 МБ, фото до 10 МБ.',
+      );
       return;
     }
 
@@ -398,7 +414,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
     } catch (e) {
       this.logger.error('flushMediaGroup', e as Error);
-      await ctx.reply('❌ Не удалось обработать файлы. Попробуйте снова.');
+      await ctx.reply(this.mediaErrorMessage(e));
       return;
     }
 
@@ -447,9 +463,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private async addMediaToDraft(ctx: any, session: SessionData, type: 'PHOTO' | 'VIDEO', fileId: string) {
     const photo = ctx.message?.photo;
     const size = type === 'VIDEO' ? ctx.message?.video?.file_size : photo?.[photo.length - 1]?.file_size;
-    const max = type === 'VIDEO' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    const max = type === 'VIDEO' ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
     if (size && size > max) {
-      await ctx.reply('❌ Файл слишком большой.');
+      await ctx.reply(
+        type === 'VIDEO'
+          ? '❌ Видео слишком большое. Telegram позволяет ботам скачивать файлы до 20 МБ — пришлите сжатое видео или более короткий ролик.'
+          : '❌ Фото слишком большое (максимум 10 МБ).',
+      );
       return;
     }
     try {
@@ -465,7 +485,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.reply(`✅ Добавлено (всего: ${items.length}). Пришлите ещё или нажмите «Готово».`, { reply_markup: menus.MEDIA_MORE });
     } catch (e) {
       this.logger.error('addMediaToDraft', e as Error);
-      await ctx.reply('❌ Не удалось обработать файл. Попробуйте другой.');
+      await ctx.reply(this.mediaErrorMessage(e));
     }
   }
 
@@ -726,7 +746,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.showCard(ctx, id, false);
     } catch (e) {
       this.logger.error('appendMediaToCard', e as Error);
-      await ctx.reply('❌ Не удалось обработать файл.');
+      await ctx.reply(this.mediaErrorMessage(e));
     }
   }
 }

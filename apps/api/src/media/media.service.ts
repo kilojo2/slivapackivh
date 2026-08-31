@@ -63,7 +63,7 @@ export class MediaService {
       throw new BadRequestException('Недопустимый формат видео');
     }
     if (buffer.length > MAX_VIDEO_BYTES) {
-      throw new BadRequestException('Видео слишком большое');
+      throw new BadRequestException('Видео слишком большое (максимум 20 МБ)');
     }
 
     const key = `cards/${randomUUID()}.mp4`;
