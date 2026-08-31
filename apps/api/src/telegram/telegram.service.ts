@@ -5,11 +5,12 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { readFile } from 'node:fs/promises';
 import { Telegraf } from 'telegraf';
 import { CardsService } from '../cards/cards.service';
 import { MediaService } from '../media/media.service';
 import { StorageService } from '../media/storage.service';
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '../media/media.util';
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_BYTES_LOCAL } from '../media/media.util';
 import { PrismaService } from '../prisma/prisma.service';
 import * as menus from './telegram.menus';
 import {
@@ -35,6 +36,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
   >();
 
+  private localMode = false;
+
   constructor(
     private readonly config: ConfigService,
     private readonly cardsService: CardsService,
@@ -43,17 +46,20 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
   ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
     if (!token) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — Telegram-бот отключён');
       return;
     }
-    const bot = new Telegraf(token);
+    const apiRoot = this.config.get<string>('TELEGRAM_API_ROOT', 'https://api.telegram.org');
+    this.localMode = apiRoot !== 'https://api.telegram.org';
+    const bot = new Telegraf(token, { telegram: { apiRoot } });
     this.bot = bot;
     this.registerMiddleware(bot);
     this.registerHandlers(bot);
-    this.logger.log('Telegram-бот инициализирован');
+    this.logger.log(`Telegram-бот инициализирован (apiRoot: ${apiRoot})`);
+    void this.setupWebhook(bot);
   }
 
   onModuleDestroy() {
@@ -143,7 +149,16 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private get maxVideoBytes(): number {
+    return this.localMode ? MAX_VIDEO_BYTES_LOCAL : MAX_VIDEO_BYTES;
+  }
+
   private async downloadMedia(ctx: any, fileId: string): Promise<Buffer> {
+    if (this.localMode) {
+      const file = await ctx.telegram.getFile(fileId);
+      if (!file.file_path) throw new Error('Локальный сервер не вернул путь к файлу');
+      return readFile(file.file_path);
+    }
     try {
       const link = await ctx.telegram.getFileLink(fileId);
       const res = await fetch(String(link));
@@ -155,6 +170,68 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         'Не удалось скачать файл — Telegram позволяет ботам скачивать файлы до 20 МБ. Пришлите сжатое видео или более короткий ролик.',
       );
     }
+  }
+
+  private async videoSource(
+    ctx: any,
+    fileId: string,
+  ): Promise<{ buffer: Buffer } | { path: string; size: number }> {
+    if (this.localMode) {
+      const file = await ctx.telegram.getFile(fileId);
+      if (!file.file_path) throw new Error('Локальный сервер не вернул путь к файлу');
+      return { path: file.file_path, size: file.file_size ?? 0 };
+    }
+    return { buffer: await this.downloadMedia(ctx, fileId) };
+  }
+
+  private async processOne(
+    ctx: any,
+    fileId: string,
+    type: 'PHOTO' | 'VIDEO',
+  ): Promise<MediaItem> {
+    if (type === 'VIDEO') {
+      const media = await this.mediaService.processVideo(
+        await this.videoSource(ctx, fileId),
+        this.maxVideoBytes,
+      );
+      return { type, mediaKey: media.key };
+    }
+    const buffer = await this.downloadMedia(ctx, fileId);
+    const media = await this.mediaService.processImage(buffer);
+    return { type, mediaKey: media.key };
+  }
+
+  private videoTooLargeMessage(): string {
+    return this.localMode
+      ? '❌ Видео слишком большое (максимум ~2 ГБ).'
+      : '❌ Видео слишком большое. Telegram позволяет ботам скачивать файлы до 20 МБ — пришлите сжатое видео или более короткий ролик.';
+  }
+
+  private mediaTooLargeMessage(): string {
+    return this.localMode
+      ? '❌ Один из файлов слишком большой. Лимиты: видео до ~2 ГБ, фото до 10 МБ.'
+      : '❌ Один из файлов слишком большой. Лимит Telegram: видео до 20 МБ, фото до 10 МБ.';
+  }
+
+  private async setupWebhook(bot: Telegraf) {
+    const url = this.config.get<string>('TELEGRAM_WEBHOOK_URL');
+    if (!url) {
+      this.logger.warn('TELEGRAM_WEBHOOK_URL не задан — webhook не обновлён');
+      return;
+    }
+    const secret = this.config.get<string>('TELEGRAM_WEBHOOK_SECRET') ?? '';
+    const opts = secret ? { secret_token: secret } : undefined;
+    for (let i = 1; i <= 5; i++) {
+      try {
+        await bot.telegram.setWebhook(url, opts);
+        this.logger.log(`Webhook установлен: ${url}`);
+        return;
+      } catch (e) {
+        this.logger.warn(`setWebhook: попытка ${i}/5 не удалась`, e as Error);
+        await new Promise((resolve) => setTimeout(resolve, 2000 * i));
+      }
+    }
+    this.logger.error('setWebhook: не удалось установить после 5 попыток');
   }
 
   private mediaErrorMessage(e: unknown): string {
@@ -398,12 +475,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     const ctx = entry.ctx;
     const maxOf = (type: 'PHOTO' | 'VIDEO') =>
-      type === 'VIDEO' ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+      type === 'VIDEO' ? this.maxVideoBytes : MAX_IMAGE_BYTES;
 
     if (entry.items.some((i) => i.size && i.size > maxOf(i.type))) {
-      await ctx.reply(
-        '❌ Один из файлов слишком большой. Лимит Telegram: видео до 20 МБ, фото до 10 МБ.',
-      );
+      await ctx.reply(this.mediaTooLargeMessage());
       return;
     }
 
@@ -453,31 +528,24 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async processMediaFile(ctx: any, fileId: string, type: 'PHOTO' | 'VIDEO'): Promise<MediaItem> {
-    const buffer = await this.downloadMedia(ctx, fileId);
-    const media = type === 'VIDEO'
-      ? await this.mediaService.processVideo(buffer)
-      : await this.mediaService.processImage(buffer);
-    return { type, mediaKey: media.key };
+    return this.processOne(ctx, fileId, type);
   }
 
   private async addMediaToDraft(ctx: any, session: SessionData, type: 'PHOTO' | 'VIDEO', fileId: string) {
     const photo = ctx.message?.photo;
     const size = type === 'VIDEO' ? ctx.message?.video?.file_size : photo?.[photo.length - 1]?.file_size;
-    const max = type === 'VIDEO' ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    const max = type === 'VIDEO' ? this.maxVideoBytes : MAX_IMAGE_BYTES;
     if (size && size > max) {
       await ctx.reply(
         type === 'VIDEO'
-          ? '❌ Видео слишком большое. Telegram позволяет ботам скачивать файлы до 20 МБ — пришлите сжатое видео или более короткий ролик.'
+          ? this.videoTooLargeMessage()
           : '❌ Фото слишком большое (максимум 10 МБ).',
       );
       return;
     }
     try {
-      const buffer = await this.downloadMedia(ctx, fileId);
-      const media = type === 'VIDEO'
-        ? await this.mediaService.processVideo(buffer)
-        : await this.mediaService.processImage(buffer);
-      const items = [...(session.draft?.media ?? []), { type, mediaKey: media.key }];
+      const media = await this.processOne(ctx, fileId, type);
+      const items = [...(session.draft?.media ?? []), { type, mediaKey: media.mediaKey }];
       await setSession(this.prisma, this.uid(ctx), {
         step: 'awaiting_media',
         draft: { ...(session.draft ?? {}), media: items },
@@ -729,17 +797,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const id = session.editingCardId;
     if (!id) return this.showMainMenu(ctx);
     try {
-      const buffer = await this.downloadMedia(ctx, fileId);
-      const media = type === 'VIDEO'
-        ? await this.mediaService.processVideo(buffer)
-        : await this.mediaService.processImage(buffer);
+      const media = await this.processOne(ctx, fileId, type);
       const last = await this.prisma.media.findFirst({
         where: { cardId: id },
         orderBy: { sort: 'desc' },
         select: { sort: true },
       });
       await this.prisma.media.create({
-        data: { cardId: id, type, mediaKey: media.key, sort: (last?.sort ?? -1) + 1 },
+        data: { cardId: id, type, mediaKey: media.mediaKey, sort: (last?.sort ?? -1) + 1 },
       });
       await resetSession(this.prisma, this.uid(ctx));
       await ctx.reply('✅ Медиа добавлено.');

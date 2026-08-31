@@ -7,6 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import type { ReadStream } from 'node:fs';
 
 @Injectable()
 export class StorageService {
@@ -33,6 +34,25 @@ export class StorageService {
         Key: key,
         Body: body,
         ContentType: contentType,
+      }),
+    );
+    return key;
+  }
+
+  /** Потоковая загрузка — для больших видео (локальный Bot API server, до ~2 ГБ). */
+  async uploadStream(
+    key: string,
+    body: ReadStream,
+    contentType: string,
+    contentLength?: number,
+  ): Promise<string> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ...(contentLength !== undefined ? { ContentLength: contentLength } : {}),
       }),
     );
     return key;

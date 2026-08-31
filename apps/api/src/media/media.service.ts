@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { createReadStream } from 'node:fs';
+import { open } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { StorageService } from './storage.service';
@@ -7,7 +9,6 @@ import {
   isImage,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PIXELS,
-  MAX_VIDEO_BYTES,
 } from './media.util';
 
 export interface ProcessedMedia {
@@ -57,17 +58,46 @@ export class MediaService {
     };
   }
 
-  async processVideo(buffer: Buffer): Promise<ProcessedMedia> {
-    const type = detectMediaType(buffer);
-    if (type !== 'video/mp4') {
+  async processVideo(
+    source: { buffer: Buffer } | { path: string; size: number },
+    maxBytes: number,
+  ): Promise<ProcessedMedia> {
+    const head = Buffer.alloc(12);
+    let size: number;
+
+    if ('buffer' in source) {
+      source.buffer.copy(head, 0, 0, 12);
+      size = source.buffer.length;
+    } else {
+      size = source.size;
+      const fh = await open(source.path, 'r');
+      try {
+        await fh.read(head, 0, 12, 0);
+      } finally {
+        await fh.close();
+      }
+    }
+
+    if (detectMediaType(head) !== 'video/mp4') {
       throw new BadRequestException('Недопустимый формат видео');
     }
-    if (buffer.length > MAX_VIDEO_BYTES) {
-      throw new BadRequestException('Видео слишком большое (максимум 20 МБ)');
+    if (size > maxBytes) {
+      throw new BadRequestException(
+        `Видео слишком большое (максимум ${Math.round(maxBytes / 1024 / 1024)} МБ)`,
+      );
     }
 
     const key = `cards/${randomUUID()}.mp4`;
-    await this.storage.upload(key, buffer, 'video/mp4');
+    if ('buffer' in source) {
+      await this.storage.upload(key, source.buffer, 'video/mp4');
+    } else {
+      await this.storage.uploadStream(
+        key,
+        createReadStream(source.path),
+        'video/mp4',
+        size,
+      );
+    }
 
     return { key, contentType: 'video/mp4' };
   }

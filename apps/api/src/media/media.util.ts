@@ -1,6 +1,8 @@
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 МБ
 // Telegram Bot API разрешает ботам скачивать файлы до 20 МБ (getFile).
 export const MAX_VIDEO_BYTES = 20 * 1024 * 1024; // 20 МБ
+// Локальный Telegram Bot API Server (режим --local) снимает лимит; Telegram хранит файлы до ~2 ГБ.
+export const MAX_VIDEO_BYTES_LOCAL = 2 * 1024 * 1024 * 1024; // 2 ГБ
 export const MAX_IMAGE_PIXELS = 40_000_000; // защита от decompression-bomb
 
 export type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'video/mp4';

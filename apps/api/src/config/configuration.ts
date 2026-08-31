@@ -6,6 +6,8 @@ export interface Env {
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_WEBHOOK_SECRET: string;
   TELEGRAM_ALLOWED_CHAT_IDS: string;
+  TELEGRAM_API_ROOT: string;
+  TELEGRAM_WEBHOOK_URL: string;
 }
 
 export default (): Env => ({
@@ -16,4 +18,6 @@ export default (): Env => ({
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN ?? '',
   TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET ?? '',
   TELEGRAM_ALLOWED_CHAT_IDS: process.env.TELEGRAM_ALLOWED_CHAT_IDS ?? '',
+  TELEGRAM_API_ROOT: process.env.TELEGRAM_API_ROOT ?? 'https://api.telegram.org',
+  TELEGRAM_WEBHOOK_URL: process.env.TELEGRAM_WEBHOOK_URL ?? '',
 });
