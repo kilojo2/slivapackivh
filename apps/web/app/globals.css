@@ -368,6 +368,11 @@ main {
   font-size: 20px;
   margin-top: 24px;
 }
+.prose h3 {
+  font-size: 16px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
 .prose p,
 .prose li {
   color: var(--text-muted);
