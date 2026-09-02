@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Search, User } from 'lucide-react';
 import { SiteNav } from './SiteNav';
+import { Logo } from './brand/Logo';
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -33,9 +34,7 @@ export function SiteHeader() {
         className={scrolled ? 'site-header scrolled' : 'site-header'}
         onMouseMove={onMouseMove}
       >
-        <Link href="/" className="logo" aria-label="SlivaPack — на главную">
-          SlivaPack
-        </Link>
+        <Logo />
 
         <SiteNav />
 
