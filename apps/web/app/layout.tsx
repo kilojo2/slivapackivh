@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
-import { SiteNav } from '../components/SiteNav';
+import { SiteHeader } from '../components/SiteHeader';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,23 +22,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body>
-        <header className="site-header">
-          <Link href="/" className="logo">
-            SlivaPack
-          </Link>
-          <SiteNav />
-          <div className="site-actions">
-            <Link href="/search" className="icon-btn" aria-label="Поиск">
-              🔍
-            </Link>
-            <Link href="/favorites" className="icon-btn" aria-label="Избранное">
-              ♡
-            </Link>
-            <Link href="/profile" className="profile-link">
-              Профиль
-            </Link>
-          </div>
-        </header>
+        <SiteHeader />
         <main className="container">{children}</main>
         <footer className="site-footer">
           <p>
