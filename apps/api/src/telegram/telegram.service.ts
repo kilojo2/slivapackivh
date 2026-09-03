@@ -52,14 +52,49 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — Telegram-бот отключён');
       return;
     }
-    const apiRoot = this.config.get<string>('TELEGRAM_API_ROOT', 'https://api.telegram.org');
-    this.localMode = apiRoot !== 'https://api.telegram.org';
+
+    const { apiRoot, localMode } = await this.resolveApiRoot(token);
+    this.localMode = localMode;
+
     const bot = new Telegraf(token, { telegram: { apiRoot } });
     this.bot = bot;
     this.registerMiddleware(bot);
     this.registerHandlers(bot);
     this.logger.log(`Telegram-бот инициализирован (apiRoot: ${apiRoot})`);
     void this.setupWebhook(bot);
+  }
+
+  private async resolveApiRoot(
+    token: string,
+  ): Promise<{ apiRoot: string; localMode: boolean }> {
+    const configured = this.config.get<string>('TELEGRAM_API_ROOT', 'https://api.telegram.org');
+    if (configured === 'https://api.telegram.org') {
+      return { apiRoot: configured, localMode: false };
+    }
+
+    // Локальный сервер может стартовать дольше приложения — ждём с ретраями.
+    for (let i = 0; i < 6; i++) {
+      if (await this.pingApiRoot(configured, token)) {
+        return { apiRoot: configured, localMode: true };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    this.logger.warn(
+      `Локальный Bot API server недоступен (${configured}) — переключаюсь на облако`,
+    );
+    return { apiRoot: 'https://api.telegram.org', localMode: false };
+  }
+
+  private async pingApiRoot(apiRoot: string, token: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${apiRoot}/bot${token}/getMe`, {
+        signal: AbortSignal.timeout(2500),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 
   onModuleDestroy() {
@@ -214,7 +249,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async setupWebhook(bot: Telegraf) {
-    const url = this.config.get<string>('TELEGRAM_WEBHOOK_URL');
+    const url = this.localMode
+      ? `http://localhost:${this.config.get<number>('PORT', 3001)}/api/telegram/webhook`
+      : this.config.get<string>('TELEGRAM_WEBHOOK_URL');
     if (!url) {
       this.logger.warn('TELEGRAM_WEBHOOK_URL не задан — webhook не обновлён');
       return;
