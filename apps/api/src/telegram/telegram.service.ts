@@ -5,6 +5,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { spawn } from 'node:child_process';
+import { existsSync, mkdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { Telegraf } from 'telegraf';
 import { CardsService } from '../cards/cards.service';
@@ -53,6 +55,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    this.spawnLocalBotApi();
+
     const { apiRoot, localMode } = await this.resolveApiRoot(token);
     this.localMode = localMode;
 
@@ -64,6 +68,44 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     void this.setupWebhook(bot);
   }
 
+  private spawnLocalBotApi() {
+    const apiId = process.env.TELEGRAM_API_ID;
+    const apiHash = process.env.TELEGRAM_API_HASH;
+    if (!apiId || !apiHash) return;
+
+    const bin = '/usr/local/bin/telegram-bot-api';
+    if (!existsSync(bin)) {
+      this.logger.warn(`Бинарь ${bin} не найден — локальный сервер недоступен`);
+      return;
+    }
+
+    try {
+      mkdirSync('/data/telegram-bot-api', { recursive: true });
+    } catch (e) {
+      this.logger.warn('Не удалось создать /data/telegram-bot-api', e as Error);
+    }
+
+    this.logger.log('Запускаю локальный telegram-bot-api (порт 8081)...');
+    const child = spawn(
+      bin,
+      [
+        `--api-id=${apiId}`,
+        `--api-hash=${apiHash}`,
+        '--local',
+        '--dir=/data/telegram-bot-api',
+        '--http-port=8081',
+      ],
+      { stdio: 'inherit' },
+    );
+
+    child.on('error', (e) => {
+      this.logger.error('Ошибка запуска telegram-bot-api', e);
+    });
+    child.on('exit', (code) => {
+      this.logger.warn(`telegram-bot-api завершился (код ${code})`);
+    });
+  }
+
   private async resolveApiRoot(
     token: string,
   ): Promise<{ apiRoot: string; localMode: boolean }> {
@@ -73,7 +115,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Локальный сервер может стартовать дольше приложения — ждём с ретраями.
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 10; i++) {
       if (await this.pingApiRoot(configured, token)) {
         return { apiRoot: configured, localMode: true };
       }
