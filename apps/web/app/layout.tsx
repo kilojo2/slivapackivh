@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { SiteHeader } from '../components/SiteHeader';
+import { VisitTracker } from '../components/VisitTracker';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="ru">
       <body>
         <SiteHeader />
+        <VisitTracker />
         <main className="container">{children}</main>
         <footer className="site-footer">
           <p>

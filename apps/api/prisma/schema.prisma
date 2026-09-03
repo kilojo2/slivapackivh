@@ -81,6 +81,14 @@ model BotSession {
   updatedAt DateTime @updatedAt
 }
 
+model DailyVisit {
+  id        String   @id @default(cuid())
+  date      String   @unique // YYYY-MM-DD (UTC)
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum CardType {
   PHOTO
   VIDEO

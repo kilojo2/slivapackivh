@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { VisitStats } from '../../components/VisitStats';
 
 export default function ProfilePage() {
   return (
@@ -8,6 +9,7 @@ export default function ProfilePage() {
       <p>
         По вопросам — <Link href="/contacts">Контакты</Link>.
       </p>
+      <VisitStats />
     </article>
   );
 }
