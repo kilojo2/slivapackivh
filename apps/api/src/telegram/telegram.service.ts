@@ -291,6 +291,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async setupWebhook(bot: Telegraf) {
+    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN') ?? '';
     const url = this.localMode
       ? `http://localhost:${this.config.get<number>('PORT', 3001)}/api/telegram/webhook`
       : this.config.get<string>('TELEGRAM_WEBHOOK_URL');
@@ -298,6 +299,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('TELEGRAM_WEBHOOK_URL не задан — webhook не обновлён');
       return;
     }
+
+    // Удаляем webhook на «другом» endpoint, чтобы не было двойной доставки.
+    if (this.localMode) {
+      await this.clearCloudWebhook(token);
+    } else {
+      await this.clearLocalWebhook(token);
+    }
+
     const secret = this.config.get<string>('TELEGRAM_WEBHOOK_SECRET') ?? '';
     const opts = secret ? { secret_token: secret } : undefined;
     for (let i = 1; i <= 5; i++) {
@@ -311,6 +320,28 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
     }
     this.logger.error('setWebhook: не удалось установить после 5 попыток');
+  }
+
+  private async clearCloudWebhook(token: string) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/deleteWebhook`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) this.logger.log('Облачный webhook удалён (чтобы не двоить)');
+    } catch (e) {
+      this.logger.warn('Не удалось удалить облачный webhook', e as Error);
+    }
+  }
+
+  private async clearLocalWebhook(token: string) {
+    try {
+      const res = await fetch(`http://localhost:8081/bot${token}/deleteWebhook`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) this.logger.log('Локальный webhook удалён');
+    } catch {
+      // локальный сервер может быть недоступен — не критично
+    }
   }
 
   private mediaErrorMessage(e: unknown): string {
