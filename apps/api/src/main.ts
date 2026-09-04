@@ -5,13 +5,36 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
+/**
+ * Разбирает TRUST_PROXY для Express `trust proxy`.
+ * - '1' / число — доверять N ступеней прокси (Railway edge — одна ступень).
+ * - 'true' — доверять всем прокси.
+ * - 'false' / '0' / '' — не доверять X-Forwarded-For.
+ * - 'loopback' / 'linklocal' / 'uniquelocal' — только локальные прокси.
+ * - IP/CIDR через запятую — доверять только конкретным адресам прокси.
+ */
+function parseTrustProxy(raw: string): boolean | number | string | string[] {
+  const value = (raw ?? '').trim();
+  if (value === '' || value === 'false' || value === '0') return false;
+  if (value === 'true') return true;
+  const hops = Number(value);
+  if (Number.isInteger(hops) && hops >= 0) return hops;
+  const list = value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (list.length > 1) return list;
+  return value;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
-  // Доверяем первому reverse-proxy (Cloudflare/Railway), чтобы корректно читать IP.
-  // ВАЖНО: включать только когда приложение реально стоит за прокси.
-  app.set('trust proxy', 1);
+  // Доверяем X-Forwarded-For только когда приложение реально стоит за прокси.
+  // ВНИМАНИЕ: если API доступен напрямую (без прокси), поставьте TRUST_PROXY=false,
+  // иначе злоумышленник подменит X-Forwarded-For и обойдёт rate-limit и дедупликацию лайков.
+  app.set('trust proxy', parseTrustProxy(config.get<string>('TRUST_PROXY') ?? '1'));
 
   // Безопасные HTTP-заголовки
   app.use(helmet());

@@ -9,6 +9,7 @@ export interface Env {
   TELEGRAM_API_ROOT: string;
   TELEGRAM_WEBHOOK_URL: string;
   ADMIN_TOKEN: string;
+  TRUST_PROXY: string;
 }
 
 export default (): Env => ({
@@ -22,4 +23,5 @@ export default (): Env => ({
   TELEGRAM_API_ROOT: process.env.TELEGRAM_API_ROOT ?? 'https://api.telegram.org',
   TELEGRAM_WEBHOOK_URL: process.env.TELEGRAM_WEBHOOK_URL ?? '',
   ADMIN_TOKEN: process.env.ADMIN_TOKEN ?? '',
+  TRUST_PROXY: process.env.TRUST_PROXY ?? '1',
 });
