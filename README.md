@@ -149,6 +149,8 @@
 | `NEXT_PUBLIC_MEDIA_URL` | web | публичный URL медиа |
 
 > `TELEGRAM_ALLOWED_CHAT_IDS` в `.env.example` — устаревшая переменная (allowlist теперь в БД через `/add` или админку/seed).
+>
+> Роли в `AllowedUser`: `admin` (может `/add` и `/remove`) и `editor` (только публикация). Первого админа заводит seed через `TELEGRAM_ADMIN_USER_IDS`, либо админ-панель (`/users`).
 ## Безопасность
 
 - **HTTP**: Helmet, CORS по allowlist (`CORS_ORIGIN`), глобальная валидация (`whitelist` + `forbidNonWhitelisted`), rate limiting (Throttler, 120 запр./мин).
@@ -191,8 +193,8 @@ npm run dev -w @slivapack/admin        # админка на :3002
 
 ### Команды
 - `/start`, `/help`, `/menu` — главное меню.
-- `/add <id>` — добавить пользователя в allowlist.
-- `/remove <id>` — убрать пользователя.
+- `/add <id>` — добавить пользователя в allowlist (только `admin`).
+- `/remove <id>` — убрать пользователя (только `admin`).
 
 ### Создание карточки (мастер)
 1. Отправить фото/видео (можно несколько) → «Добавлено» → кнопка «Готово».

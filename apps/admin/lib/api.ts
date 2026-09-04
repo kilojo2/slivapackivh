@@ -49,7 +49,10 @@ export const api = {
   deleteCard: (id: string, hard = false) =>
     request(`/admin/cards/${id}?hard=${hard}`, { method: 'DELETE' }),
   users: () => request<any[]>('/admin/users'),
-  addUser: (data: { telegramUserId: string; isActive: boolean }) =>
-    request('/admin/users', { method: 'POST', body: JSON.stringify(data) }),
+  addUser: (data: {
+    telegramUserId: string;
+    isActive: boolean;
+    role?: 'admin' | 'editor';
+  }) => request('/admin/users', { method: 'POST', body: JSON.stringify(data) }),
   removeUser: (id: string) => request(`/admin/users/${id}`, { method: 'DELETE' }),
 };

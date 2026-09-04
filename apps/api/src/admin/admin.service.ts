@@ -112,8 +112,11 @@ export class AdminService {
     const isActive = dto.isActive ?? true;
     return this.prisma.allowedUser.upsert({
       where: { telegramUserId: dto.telegramUserId },
-      create: { telegramUserId: dto.telegramUserId, isActive },
-      update: { isActive },
+      create: { telegramUserId: dto.telegramUserId, isActive, role: dto.role ?? 'editor' },
+      update: {
+        isActive,
+        ...(dto.role !== undefined ? { role: dto.role } : {}),
+      },
     });
   }
 

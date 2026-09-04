@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class AdminUserDto {
   @IsString()
@@ -7,4 +7,8 @@ export class AdminUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsIn(['admin', 'editor'])
+  role?: 'admin' | 'editor';
 }

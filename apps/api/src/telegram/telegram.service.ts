@@ -167,6 +167,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return !!user?.isActive;
   }
 
+  private async isAdmin(ctx: any): Promise<boolean> {
+    const user = await this.prisma.allowedUser.findUnique({
+      where: { telegramUserId: this.uid(ctx) },
+    });
+    return !!user?.isActive && user.role === 'admin';
+  }
+
   private uid(ctx: any): string {
     return String(ctx.from?.id ?? '');
   }
@@ -184,6 +191,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleAddUser(ctx: any) {
+    if (!(await this.isAdmin(ctx))) {
+      return ctx.reply('⛔ Требуются права администратора.');
+    }
     const arg = (ctx.message?.text ?? '').trim().split(/\s+/)[1];
     const userId = (arg ?? '').replace(/[^0-9]/g, '');
     if (!userId) {
@@ -198,6 +208,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleRemoveUser(ctx: any) {
+    if (!(await this.isAdmin(ctx))) {
+      return ctx.reply('⛔ Требуются права администратора.');
+    }
     const arg = (ctx.message?.text ?? '').trim().split(/\s+/)[1];
     const userId = (arg ?? '').replace(/[^0-9]/g, '');
     if (!userId) {
@@ -355,8 +368,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async showCard(ctx: any, cardId: string, edit: boolean, prefix?: string) {
-    const card = await this.prisma.card.findUnique({
-      where: { id: cardId },
+    const card = await this.prisma.card.findFirst({
+      where: { id: cardId, authorUserId: this.uid(ctx) },
       include: {
         media: { orderBy: { sort: 'asc' } },
         _count: { select: { likes: true } },
@@ -410,13 +423,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async showStats(ctx: any) {
+    const mine = { authorUserId: this.uid(ctx) };
     const [total, published, drafts, removed, likes, viewsAgg] = await Promise.all([
-      this.prisma.card.count(),
-      this.prisma.card.count({ where: { status: 'PUBLISHED' } }),
-      this.prisma.card.count({ where: { status: 'DRAFT' } }),
-      this.prisma.card.count({ where: { status: 'REMOVED' } }),
-      this.prisma.like.count(),
-      this.prisma.card.aggregate({ _sum: { viewCount: true } }),
+      this.prisma.card.count({ where: mine }),
+      this.prisma.card.count({ where: { ...mine, status: 'PUBLISHED' } }),
+      this.prisma.card.count({ where: { ...mine, status: 'DRAFT' } }),
+      this.prisma.card.count({ where: { ...mine, status: 'REMOVED' } }),
+      this.prisma.like.count({ where: { card: { authorUserId: this.uid(ctx) } } }),
+      this.prisma.card.aggregate({ where: mine, _sum: { viewCount: true } }),
     ]);
     const views = viewsAgg._sum.viewCount ?? 0;
     await this.render(
@@ -427,17 +441,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async showListFilters(ctx: any) {
+    const mine = { authorUserId: this.uid(ctx) };
     const [published, drafts, removed] = await Promise.all([
-      this.prisma.card.count({ where: { status: 'PUBLISHED' } }),
-      this.prisma.card.count({ where: { status: 'DRAFT' } }),
-      this.prisma.card.count({ where: { status: 'REMOVED' } }),
+      this.prisma.card.count({ where: { ...mine, status: 'PUBLISHED' } }),
+      this.prisma.card.count({ where: { ...mine, status: 'DRAFT' } }),
+      this.prisma.card.count({ where: { ...mine, status: 'REMOVED' } }),
     ]);
     await this.render(ctx, '📋 Мои карточки\n\nВыберите раздел:', menus.listFilters(published, drafts, removed));
   }
 
   private async showCardList(ctx: any, status: 'PUBLISHED' | 'DRAFT' | 'REMOVED') {
     const cards = await this.prisma.card.findMany({
-      where: { status },
+      where: { status, authorUserId: this.uid(ctx) },
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: { id: true, title: true },
@@ -618,6 +633,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       );
     } else if (session?.step === 'awaiting_append_media' && session.editingCardId) {
       const id = session.editingCardId;
+      const owner = await this.prisma.card.findFirst({
+        where: { id, authorUserId: entry.userId },
+        select: { id: true },
+      });
+      if (!owner) {
+        await resetSession(this.prisma, entry.userId);
+        await ctx.reply('Карточка не найдена');
+        return;
+      }
       const last = await this.prisma.media.findFirst({
         where: { cardId: id },
         orderBy: { sort: 'desc' },
@@ -817,7 +841,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     await this.showMainMenu(ctx);
   }
   private async setCardStatus(ctx: any, id: string, status: 'PUBLISHED' | 'DRAFT' | 'REMOVED') {
-    await this.prisma.card.updateMany({ where: { id }, data: { status } });
+    await this.prisma.card.updateMany({ where: { id, authorUserId: this.uid(ctx) }, data: { status } });
     await this.answerCb(ctx);
     await this.showCard(ctx, id, true);
   }
@@ -831,22 +855,24 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async confirmDelete(ctx: any, id: string) {
-    await this.prisma.card.updateMany({ where: { id }, data: { status: 'REMOVED' } });
+    await this.prisma.card.updateMany({ where: { id, authorUserId: this.uid(ctx) }, data: { status: 'REMOVED' } });
     await this.answerCb(ctx, 'Удалено');
     await this.showCard(ctx, id, true, '🗑 Удалена');
   }
 
   private async confirmPurge(ctx: any, id: string) {
-    const card = await this.prisma.card.findUnique({
-      where: { id },
+    const card = await this.prisma.card.findFirst({
+      where: { id, authorUserId: this.uid(ctx) },
       include: { media: true },
     });
-    if (card) {
-      for (const m of card.media) {
-        await this.storage.delete(m.mediaKey).catch(() => undefined);
-      }
-      await this.prisma.card.delete({ where: { id } });
+    if (!card) {
+      await this.answerCb(ctx, 'Карточка не найдена');
+      return;
     }
+    for (const m of card.media) {
+      await this.storage.delete(m.mediaKey).catch(() => undefined);
+    }
+    await this.prisma.card.deleteMany({ where: { id, authorUserId: this.uid(ctx) } });
     await this.answerCb(ctx, 'Удалено навсегда');
     await this.render(ctx, '🗑 Карточка удалена навсегда.', menus.BACK_TO_MENU);
   }
@@ -867,7 +893,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   private async setCardSource(ctx: any, id: string, source: string) {
     await this.prisma.card.updateMany({
-      where: { id },
+      where: { id, authorUserId: this.uid(ctx) },
       data: { source: source === 'none' ? null : source },
     });
     await this.answerCb(ctx, 'Источник обновлён');
@@ -886,7 +912,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
     const id = session.editingCardId;
     if (id) {
-      await this.prisma.card.updateMany({ where: { id }, data: { title: title.trim() } });
+      await this.prisma.card.updateMany({ where: { id, authorUserId: this.uid(ctx) }, data: { title: title.trim() } });
       await resetSession(this.prisma, this.uid(ctx));
       await ctx.reply('✅ Заголовок обновлён.');
       await this.showCard(ctx, id, false);
@@ -896,7 +922,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private async saveCardText(ctx: any, session: SessionData, text: string) {
     const id = session.editingCardId;
     if (id) {
-      await this.prisma.card.updateMany({ where: { id }, data: { text: text.trim() } });
+      await this.prisma.card.updateMany({ where: { id, authorUserId: this.uid(ctx) }, data: { text: text.trim() } });
       await resetSession(this.prisma, this.uid(ctx));
       await ctx.reply('✅ Описание обновлено.');
       await this.showCard(ctx, id, false);
@@ -906,6 +932,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private async appendMediaToCard(ctx: any, session: SessionData, type: 'PHOTO' | 'VIDEO', fileId: string) {
     const id = session.editingCardId;
     if (!id) return this.showMainMenu(ctx);
+    const owner = await this.prisma.card.findFirst({
+      where: { id, authorUserId: this.uid(ctx) },
+      select: { id: true },
+    });
+    if (!owner) {
+      await this.answerCb(ctx, 'Карточка не найдена');
+      return this.showMainMenu(ctx);
+    }
     try {
       const media = await this.processOne(ctx, fileId, type);
       const last = await this.prisma.media.findFirst({
