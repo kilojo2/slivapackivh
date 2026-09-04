@@ -19,10 +19,6 @@ COPY . .
 RUN npm ci
 RUN npm run build -w @slivapack/api
 
-# Entrypoint: поднимает Bot API server, затем применяет миграции и запускает API
-COPY apps/api/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh && mkdir -p /data/telegram-bot-api
-
 WORKDIR /app/apps/api
 EXPOSE 3001 8081
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["npm", "start"]
